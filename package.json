@@ -1,5 +1,5 @@
 {
-  "name": "host-csrf",
+  "name": "@jrmcgarvey/host-csrf",
   "version": "1.0.0",
   "description": "CSRF Double Submit with __Host Cookie",
   "main": "index.js",
@@ -10,6 +10,8 @@
     "csrf",
     "double-submit"
   ],
-  "author": "John McGarvey",
-  "license": "ISC"
+  "author": "John McGarvey <johnmcgarvey55@gmail.com>",
+  "license": "ISC",
+  "repository": "https://github.com/jrmcgarvey/host-csrf.git",
+  "homepage": "https://github.com/jrmcgarvey/host-csrf#readme"
 }

@@ -35,17 +35,17 @@ Installation: npm install csrf
 Configuration: The csrf method is passed an optional parameter, an object with the
 following properties, each of which is optional:
 
-protected_operations: An array of strings with the operation names that are to be monitored
-protected_content_types: An array of strings with the content types that are monitored
-developer_mode: a boolean, true by default
-header_name: the name of an HTTP header that may contain the token, if it is not in the body or query parameters.  By default this is csrf-token.
+protected_operations: An array of strings with the operation names that are to be monitored  
+protected_content_types: An array of strings with the content types that are monitored  
+developer_mode: a boolean, true by default  
+header_name: the name of an HTTP header that may contain the token, if it is not in the body or query parameters.  By default this is csrf-token.  
 
 POST operations with the content types of application/x-www-form-urlencoded,
 text/plain, and multipart/form-data or with no content-type header 
 are always monitored.  CSRF attempts for other
 operations or content types should fail because of CORS policy, so if you are
 confident of your CORS configuration, you do not need to add to these, but you
-may add other operations or content types for defense in depth.
+may add operations or content types for defense in depth.
 
 If a request is monitored, it is rejected with an exception unless there is a
 _csrf property in the req.body, or in the req.query, or a value in the header with the

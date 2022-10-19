@@ -1,6 +1,6 @@
 const { randomUUID } = require("crypto");
 const protected_operations = ["POST"];
-const protected_datatypes = [
+const protected_content_types = [
   "application/x-www-form-urlencoded",
   "text/plain",
   "multipart/form-data",
@@ -34,10 +34,10 @@ const csrf = (params) => {
         }
       });
     }
-    if (params.protected_datatypes) {
-      params.protected_datatypes.forEach((dt) => {
-        if (!protected_datatypes.includes(dt)) {
-          protected_datatypes.push(dt);
+    if (params.protected_content_types) {
+      params.protected_content_types.forEach((dt) => {
+        if (!protected_content_types.includes(dt)) {
+          protected_content_types.push(dt);
         }
       });
     }
@@ -73,7 +73,7 @@ const csrf = (params) => {
     if (!datatype) {
       dt_protect = true;
     } else {
-      dt_protect = protected_datatypes.includes(datatype.toLowerCase());
+      dt_protect = protected_content_types.includes(datatype.toLowerCase());
     }
     if (protected_operations.includes(req.method) && dt_protect) {
       const token = find_token(req);
