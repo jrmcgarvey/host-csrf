@@ -1,0 +1,15 @@
+{
+  "name": "host-csrf",
+  "version": "1.0.0",
+  "description": "CSRF Double Submit with __Host Cookie",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "csrf",
+    "double-submit"
+  ],
+  "author": "John McGarvey",
+  "license": "ISC"
+}
