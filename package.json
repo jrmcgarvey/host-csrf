@@ -1,5 +1,5 @@
 {
-  "name": "@jrmcgarvey/host-csrf",
+  "name": "host-csrf",
   "version": "1.0.0",
   "description": "CSRF Double Submit with __Host Cookie",
   "main": "index.js",
