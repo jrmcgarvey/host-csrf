@@ -1,6 +1,6 @@
 {
   "name": "host-csrf",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "CSRF Double Submit with __Host Cookie",
   "main": "index.js",
   "scripts": {
@@ -13,5 +13,8 @@
   "author": "John McGarvey <johnmcgarvey55@gmail.com>",
   "license": "ISC",
   "repository": "https://github.com/jrmcgarvey/host-csrf.git",
-  "homepage": "https://github.com/jrmcgarvey/host-csrf#readme"
+  "homepage": "https://github.com/jrmcgarvey/host-csrf#readme",
+  "dependencies": {
+    "cookie-parser": "~1.4.5"
+  }
 }

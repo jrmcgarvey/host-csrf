@@ -53,8 +53,8 @@ configured name. The value must match the cookie.  Cookies are signed, as this i
 OWASP best practice.  The cookie_parser package or an equivalent must be used, with
 a secret set to enable cookie signing.
 
-The csrf middleware must be in the app.use chain after cookie_parser but before any of
-the routes.
+The csrf middleware must be in the app.use chain after cookie_parser and any body parsers
+but before any of the routes.
 
 Example:
 
