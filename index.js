@@ -5,15 +5,19 @@ const protected_content_types = [
   "text/plain",
   "multipart/form-data",
 ];
-const cookieParams = {
-  httpOnly: true,
-  sameSite: "strict",
-  signed: true,
-  maxAge: 300000,
+let cookieParams = {
+  sameSite: "strict"
 };
 let cookieName = "csrfToken";
 let header_name = "csrf-token";
 let development_mode = true;
+let init = false;
+
+class CSRFError extends Error {
+  constructor(msg) {
+    super(msg)
+  }
+}
 
 const find_token = (req) => {
   if (req.body && req.body._csrf) {
@@ -41,6 +45,11 @@ const csrf = (params) => {
         }
       });
     }
+    if (params.cookieParams) {
+      cookieParams=params.cookieParams
+    }
+    cookieParams.signed=true
+    cookieParams.httpOnly=true
     if ("development_mode" in params) {
       development_mode = params.development_mode;
     }
@@ -54,10 +63,11 @@ const csrf = (params) => {
     cookieName = "__Host-csrfToken";
     cookieParams.secure = true;
   }
+  init = true;
   return (req, res, next) => {
-    if (!req.signedCookies || !res.cookie) {
-      throw new Error(
-        "CSRF protection requires cookie middleware and a cookie secret."
+    if (!req.signedCookies) {
+      throw new CSRFError(
+        "CSRF protection requires cookie-parser middleware and a cookie secret."
       );
     }
     let _csrf = null;
@@ -78,19 +88,43 @@ const csrf = (params) => {
     if (protected_operations.includes(req.method) && dt_protect) {
       const token = find_token(req);
       if (token != _csrf) {
-        throw new Error("CSRF token validation failed.");
+        throw new CSRFError("CSRF token validation failed.");
       }
     }
     next();
   };
 };
-
+const token = (req, res) => {
+  if (!req.signedCookies) {
+    throw new CSRFError(
+      "CSRF protection requires cookie-parser middleware and a cookie secret."
+    );
+  }
+  _csrf = req.signedCookies[cookieName]
+  if (!_csrf) {
+    return refresh(req,res);
+  } else {
+    res.locals._csrf = _csrf;
+    return _csrf;
+  }
+}
 const refresh = (req,res) => {
+  if (!init) {
+    throw new CSRFError("CSRF middleware has not been intialized.")
+  }
+  if (!req.signedCookies) {
+    throw new CSRFError(
+      "CSRF protection requires cookie-parser middleware and a cookie secret."
+    );
+  }
   _csrf = randomUUID();
   res.cookie(cookieName, _csrf, cookieParams);
   res.locals._csrf = _csrf;
+  return _csrf;
 };
 
 csrf.refresh = refresh;
+csrf.CSRFError = CSRFError;
+csrf.token = token;
 
 module.exports = csrf;
