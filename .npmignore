@@ -1,0 +1,6 @@
+.npmrc
+/node_modules
+package-lock.json
+.gitignore
+/test
+eslint.config.mjs

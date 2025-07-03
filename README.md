@@ -1,133 +1,103 @@
-# CSRF Protection with __Host Cookie
+# CSRF Protection with __Host- Cookie
 
-This package provides a means of CSRF protection using the double submit cookie
-pattern.
+This package provides a means of CSRF protection using the double submit cookie pattern.
+
+Version 2.0.0
 
 ## Motivation
 
-Previous packages, I think, do not address the vulnerabilities described in
+The csurf package still works, but it is deprecated and unsupported.  The csrf-csrf package is clumsy to use from Commonjs.
+I created this package to support students, but I think it has general use, and I will continue to support it. This 2.0 release includes many changes to make configuration and use easier.  They are breaking changes, but the package has mostly been used by students until now. 
 
-[Bypassing CSRF Protections](https://owasp.org/www-pdf-archive/David_Johansson-Double_Defeat_of_Double-Submit_Cookie.pdf)
+By default, the package uses a cookie with a __Host- prefix, for additional protection.  This package is intended for use
+in Express, in combination with the cookie-parser middleware.  Two patterns of use are supported.  In either case, the CSRF
+cookie and token are set, typically at logon time, but before any other cookie is set that might be abused by a CSRF attack.  
 
-A package may sign and/or encrypt the CSRF cookie and/or the CSRF token.  However, the
-attacker then can write a program to request a form from the application.  The form
-is returned with both cookie and token.  Thus armed, the attacker can set this cookie for
-a specific path and subdomain associated with the application, using the
-techniques described at the link above, and can perform a CSRF
-attack, inserting the token into the request body.  The token used by the attacker
-will correspond to the one in the cookie, and the signature and encryption will also
-appear correct to the application, so these approaches don't solve the problem.
+1. In the case of REST APIs, the CSRF token can be returned to the caller, typically in the body of a REST response.  The token can then be stored in browser local storage, to be included with subsequent requests, typically in a header, but possibly in the body.
+2. In the case of Express server side rendering, the token may be included as a hidden field in each form that is sent to the client, so that it is returned when the form is submitted.
 
-This package attempts to remedy the problem by using cookies with a __Host prefix.  Such
-cookies can't be superseded by any that the attacker might set.
-However, they must be set with the secure flag set to true,
-which creates a problem for developers, who run the application without SSL.
-This package provides a developer_mode flag, which if set to
-true (the default), causes the cookie to be created without the secure flag and
-without the __Host prefix.  The configuration is not secure this way, so the flag
-should be set to false in production.
+In either case, a protected operation for a protected route will throw an error if the CSRF cookie is not set, or if the token is not conveyed in the header or body of the request, or if the conveyed token doesn't match the cookie contents.  If host-csrf throws an error, the name of the error is CSRFError.  When the csrf token is sent in the body of the request, it is with the attribute name _csrf.  In the case of an x-www-form-urlencoded response, the key name would be _csrf.  
 
-I think this is quite secure, but this package is to be used at your own risk, without
-any warranties expressed or implied.
-
-Since the release of this package, The csrf-csrf package has also been provided, which works much the same way. I will continue to maintain this package however.
+A signed cookie is used. If cookie-parser is not configured with a secret, Express will throw an error when host-csrf attempts to set the cookie.  
 
 ## Use of this package
 
 Installation: npm install host-csrf
 
-Configuration: The csrf method is passed an optional parameter, an object with the
-following properties, each of which is optional:
+Typical use:
 
-- protected_operations: An array of strings with the operation names that are to be monitored  
-- protected_content_types: An array of strings with the content types that are monitored  
-- developer_mode: a boolean, true by default  
-- header_name: the name of an HTTP header that may contain the token, 
-if it is not in the body or query parameters.  The default name is csrf-token. 
-- cookieParams: Cookie parameters.  One can set some cookie parameters, such as the 
-expires or maxAge properties (these are not set
-by default) or sameSite (by default, set to "Strict").
-However, the signed and httpOnly cookieParams properties are always set to
-true, and if developer_mode is set to false, then secure is set to true, regardless if what is passed
-in cookieParams.
+```js
+const cookieParser = require("cookie-parser")
+const csrf = require("host-csrf");
+app.use(cookieParser("use_a_secure_secret"))
+const csrfMiddleware = csrf.csrf();
+```
 
-The cookie name is csrfToken for developer mode, and __Host_csrfToken if developer mode is false.
+An options object may be passed on the `csrf.csrf()` call, with the following attributes, all optional:
 
-POST operations on protected routes with the content types of application/x-www-form-urlencoded,
-text/plain, and multipart/form-data or with no content-type header 
-are always protected, i.e. they will fail if the correct CSRF token is not present.  CSRF attempts for other
-operations or content types should fail because of CORS policy, so if you are
-confident of your CORS configuration, you may not need any additional values.
+cookieName: A string. By default, the cookie name is "__Host-csrfToken".  
 
-If a request is monitored, it is rejected with an exception unless there is a
-_csrf property in the req.body, or in the req.query, or a value in the header with the
-configured name. The value must match the cookie.  Cookies are signed, as this is
-OWASP best practice.  The cookie_parser package must be used, with
-a secret set to enable cookie signing.
+protectedOperations: An array of strings. By default, this is ["POST","PUT", "PATCH", "DELETE", "CONNECT"], and these are always protected, but additional protected operations may be specified.
 
-The csrf middleware must be in the app.use chain after cookie_parser and any body parsers
-but before any of the routes you wish to protect.
+headerName: A string.  By default, this is "csrf-token".  When the token is passed in a request header, this is the header to be used.
 
-Example:
+At logon time:
 
+```js
+const csrfToken = csrf.refreshToken(req,res);  // This sets the cookie.  res.locals._csrf also holds the token.
 ```
-const csrf = require('host-csrf')
 
-app.use(cookieParser("notverysecret"));
-app.use(express.urlencoded({ extended: false }));
-let csrf_development_mode = true;
-if (app.get("env") === "production") {
-  csrf_development_mode = false;
-  app.set("trust proxy", 1);
-}
-const csrf_options = {
-  protected_operations: ["PATCH"],
-  protected_content_types: ["application/json"],
-  development_mode: csrf_development_mode,
-};
-const csrf_middleware = csrf(csrf_options); //initialise and return middlware
-```
-The csrf function is called for initialization, and returns the middleware.  One
-can retrieve the current token with 
-```
-  let token = csrf.token(req, res);
-```
-If no token is set, this function sets the token and stores it in the cookie. The middleware
-will also set the token if it is not set. Routes can be protected by adding the csrf middleware via
-```
-  app.use(csrf_middleware(req,res,next));
-```
-or, for individual routes, in the app.use for the route:
-```
-  app.get("/something, csrf_middleware, (req, res)=> {
-    ...
-  })
-```
-The typical way to send the token is in the body of the form as a hidden value:
+A protected route:
 
+```js
+app.post("/protected", csrfMiddleware, (req,res)=>{
+  ...
+})
 ```
-   <input type="hidden" name="_csrf" value="<%= _csrf %>">
-```
-Or, if the token is to be accessed from client side JavaScript, to retrieve it via
-a route like:
-```
-  app.get("/get_token", (req,res) => {
-    const csrfToken = csrf.token();
-    res.json({ csrfToken });
-  })
-```
-It's a good practice to refresh the token as the user logs on.  You
-can do this with:
-```
-  let token = csrf.refresh(req,res);
-```
-Any forms rendered before the token refresh must be re-rendered with the new token.
+Several other functions:
 
-If CSRF token validation fails on a protected request, an error of class csrf.CSRFError is returned.
+```js
+const csrfToken = csrf.getToken(req,res); // returns the existing token if set, and also stores it in res.locals._csrf.
+// If the csrf cookie has not been set, this function calls refreshToken() and returns the newly created token.
+// Note that refreshToken() always changes the token contents of the cookie.
 
-## Notes for Version 1.0.2   
-- Some cookie parameters can now be specified.  
-- The csrf.refresh function now returns the token as well as refreshing it.  The csrf.token function
-has been added, as has the csrf.CSRFError class.
-- Some rework has been done to the documentation for clarity.  
+csrf.clearToken(req,res); // causes the cookie to be unset, so that all access to protected routes would fail.
+```
 
+The cookie parameters are always:
+
+- signed=true
+- httpOnly=true
+- secure=true
+- sameSite="None"
+
+It's best to do:
+
+```js
+app.set("trust proxy", 1)
+```
+for production deployment, because a proxy is terminating the HTTPS connection in this case.
+
+## Development Mode
+
+When set by the back end in a response to a REST API, a cookie is a cross-site cookie.  Therefore, it must be secure, with SameSite=None.  However, when one is developing, it is clumsy to set up HTTPS. Even for non-HTTPS connections, Express will issue a Set-Cookie header with the options above, but browsers such as Chrome will not accept such cookies over a non-HTTPS connection, except for one case, which is when the response is coming from localhost.  This browser behavior enables development. But, suppose one is testing with Postman.  Postman does not allow secure cookies over non-HTTPS connections, even for localhost.  This is annoying -- Postman is intended to simulate browser behavior, and in this case, it doesn't do so with fidelity.  It is also not possible to use a __Host- prefix in a cookie name when using Postman for a non-HTTPS connection.  These problems also apply to the supertest agent.  To address this, one can set the following environment variable before starting the Express application:
+
+```bash
+export XS_COOKIE_DEVELOPMENT_MODE=true
+```
+
+If
+
+- this environment variable is set to true, and
+- the connection is not HTTPS, and
+- the request is coming to localhost or 127.0.0.1
+
+then, the following cookie options are used by host-csrf:
+
+- signed=true
+- httpOnly=true
+- sameSite="Strict"
+
+In addition, the cookie name used in this case is `csrfToken`.
+
+This way, testing with Postman and the supertest agent works.  In addition, if a front end application that is listening on a localhost port makes a REST call to a back end also listening on localhost, the cookie is not considered a cross site cookie by the browsers, so the cookie options above work.  One would not want or need the environment variable in production. 
